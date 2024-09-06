@@ -1,0 +1,75 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: presync-job
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+spec:
+  template:
+    spec:
+      containers:
+        - name: presync-job
+          image: ubuntu
+          command: 
+            - /bin/bash
+            - -c
+            - |
+              echo "Integration testing Done"
+              
+      restartPolicy: Never
+  backoffLimit: 2
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: postsync-job
+  annotations:
+    argocd.argoproj.io/hook: PostSync    
+spec:
+  template:
+    spec:
+      containers:
+        - name: postsync-job-success
+          image: ubuntu
+          command: 
+            - /bin/bash
+            - -c
+            - |
+              apt update -y
+              echo "*******************************************************************************************************************************************"
+              apt upgrade -y
+              echo "*******************************************************************************************************************************************"
+              apt install curl -y
+              echo "*******************************************************************************************************************************************"
+              curl --version
+              echo "*******************************************************************************************************************************************"
+              curl https://slack.com/api/chat.postMessage -X POST -H 'Content-type: application/json; charset=utf-8' -H "Authorization: Bearer xoxb-3766907245264-3743276587650-qjpCplhjS27y2tHhW5AcaM5g" --data '{"channel":"C03MY9B7268", "text":"Synced succesfully"}'
+
+      restartPolicy: Never
+  backoffLimit: 2
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: app-slack-notification-fail-
+  annotations:
+    argocd.argoproj.io/hook: SyncFail
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  template:
+    spec:
+      containers:
+      - name: slack-notification-failed
+        image: ubuntu
+        command: 
+            - /bin/bash
+            - -c
+            - |
+              apt update -y
+              apt upgrade -y
+              apt install curl -y
+              curl --version
+              curl -X POST -H "Content-type: application/json" --data "{'text':'SYNC Failed'}" https://hooks.slack.com/services/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
+      restartPolicy: Never
+  backoffLimit: 2
